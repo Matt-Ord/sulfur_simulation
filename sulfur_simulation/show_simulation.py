@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from matplotlib.collections import PathCollection
     from matplotlib.figure import Figure
 
+    from sulfur_simulation.scattering_calculation import SimulationParameters
+
 
 def animate_particle_positions(
     all_particle_positions: np.ndarray,  # shape: (n_particles, n_timesteps, 2)
@@ -62,3 +64,27 @@ def animate_particle_positions(
         blit=False,
         repeat=True,
     )
+
+
+def print_timeframe(
+    positions: np.ndarray, timestep: int, params: SimulationParameters
+) -> str:
+    """Print a preview of positions at specified timestep. Works for small grids."""
+    dimension = params.lattice_dimension
+    max_dimension = 100
+    if dimension > max_dimension:
+        return "Lattice too large to print"
+    grid = positions[timestep].reshape((dimension, dimension))
+
+    green = "\033[92m"
+    gray = "\033[0m"
+
+    def colorize(val: bool) -> str:  # noqa: FBT001
+        return f"{green}o{gray}" if val else "."
+
+    lines: list[str] = []
+    for row in grid:
+        colored_row = [colorize(v) for v in row]
+        lines.append(" ".join(colored_row))
+
+    return "\n".join(lines)

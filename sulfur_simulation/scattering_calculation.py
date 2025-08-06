@@ -113,7 +113,7 @@ def run_simulation(
     """Run the simulation."""
     rng = np.random.default_rng(seed=params.rng_seed)
     all_particle_positions = np.empty(
-        (params.n_particles, params.n_timesteps), dtype=bool
+        (params.n_timesteps, params.lattice_dimension**2), dtype=bool
     )  # create empty array
 
     all_particle_positions[0] = params.initial_positions  # insert starting positions

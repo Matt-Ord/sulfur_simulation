@@ -15,7 +15,10 @@ from sulfur_simulation.scattering_calculation import (
     SimulationParameters,
     run_simulation,
 )
-from sulfur_simulation.show_simulation import animate_particle_positions
+from sulfur_simulation.show_simulation import (
+    animate_particle_positions,
+    print_timeframe,
+)
 
 if __name__ == "__main__":
     # Create a simulation with 5000 timesteps
@@ -36,6 +39,12 @@ if __name__ == "__main__":
     )
 
     positions = run_simulation(params=params, hop_params=hop_params)
+
+    print(
+        print_timeframe(
+            positions=positions, timestep=params.n_timesteps - 1, params=params
+        )
+    )
 
     amplitudes = get_amplitude(
         form_factor=isf_params.form_factor,
