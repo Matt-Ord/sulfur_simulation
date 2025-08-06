@@ -1,69 +1,136 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
 if TYPE_CHECKING:
+    from hopping_calculator import HoppingCalculator
     from numpy.random import Generator
 
 
-def _update_position(
-    position: np.ndarray,
-    hopping_probability: float,
-    lattice_spacing: float,
+def _update_positions(
+    particle_positions: np.ndarray,
+    jump_probabilities: np.ndarray,
     rng: Generator,
-) -> np.ndarray:  # temp function to enable simple random diffusion
-    """Update the position of the particle."""
-    n_directions = 4
-    directions = {
-        0: np.array([lattice_spacing, 0]),  # RIGHT
-        1: np.array([-1 * lattice_spacing, 0]),  # LEFT
-        2: np.array([0, lattice_spacing]),  # UP
-        3: np.array([0, -1 * lattice_spacing]),  # DOWN
-    }
-
-    if rng.random() < hopping_probability:
-        direction = int(rng.integers(low=0, high=n_directions))
-        return position + directions[direction]
-    return position
-
-
-def _run_simulation(
-    initial_position: np.ndarray,
-    hopping_probability: float,
-    lattice_spacing: float,
-    rng: Generator,
-    n_timesteps: int,
+    params: SimulationParameters,
 ) -> np.ndarray:
-    position = initial_position
-    positions = np.empty((n_timesteps, 2))
-    for i in range(1, n_timesteps):
-        position = _update_position(
-            position=position,
-            hopping_probability=hopping_probability,
-            lattice_spacing=lattice_spacing,
-            rng=rng,
-        )
-        positions[i] = position
-    return positions
+    n_particles = params.n_particles
+    true_locations = np.flatnonzero(particle_positions)
+
+    for particle_index in range(n_particles):
+        cumulative_probs = np.cumsum(jump_probabilities[particle_index])
+        rand_val = rng.random()
+
+        for i, threshold in enumerate(cumulative_probs):
+            if rand_val < threshold:
+                particle_positions = _make_jump(
+                    i=i,
+                    particle_positions=particle_positions,
+                    params=params,
+                    current_particle_position=true_locations[particle_index],
+                )
+                break
+
+    return particle_positions
 
 
-def run_multiple_simulations(params: SimulationParameters, n_runs: int) -> np.ndarray:
-    """Run multiple simulations and returns all positions."""
-    all_positions = np.empty((n_runs, params.n_timesteps, 2))
-    for i in range(n_runs):
-        rng = np.random.default_rng(seed=i)
-        position = _run_simulation(
-            initial_position=params.initial_position,
-            hopping_probability=params.hopping_probability,
-            lattice_spacing=params.lattice_spacing,
-            rng=rng,
-            n_timesteps=params.n_timesteps,
+def _make_jump(
+    current_particle_position: int,
+    params: SimulationParameters,
+    i: int,
+    particle_positions: np.ndarray,
+) -> np.ndarray:
+    dimension = params.lattice_dimension
+
+    relative_destinations = [
+        -1 * dimension - 1,
+        -1 * dimension,
+        -1 * dimension + 1,
+        -1,
+        0,
+        1,
+        dimension - 1,
+        dimension,
+        dimension + 1,
+    ]
+    up_right = 2
+    down_right = 8
+    down_left = 6
+
+    if (
+        current_particle_position == dimension - 1 and i == up_right
+    ):  # if in top right corner + if going up + right
+        new_destination = dimension * (dimension - 1)
+    elif (
+        current_particle_position == dimension**2 - 1 and i == down_right
+    ):  # if in bottom right corner + if going down + right
+        new_destination = 0
+    elif current_particle_position == 0 and i == 0:  # if in top left corner
+        new_destination = dimension**2 - 1
+    elif (
+        current_particle_position == dimension * (dimension - 1) and i == down_left
+    ):  # if in bottom left corner
+        new_destination = dimension - 1
+    elif (current_particle_position + 1) % dimension == 0 and i in {
+        2,
+        5,
+        8,
+    }:  # if on right side
+        new_destination = (
+            current_particle_position + relative_destinations[i] - dimension
         )
-        all_positions[i] = position
-    return all_positions
+    elif current_particle_position % dimension == 0 and i in {
+        0,
+        3,
+        6,
+    }:  # if on left side
+        new_destination = (
+            current_particle_position + relative_destinations[i] + dimension
+        )
+    else:
+        new_destination = current_particle_position + relative_destinations[i]
+
+    if new_destination < 0:  # now checking if top/bottom rows went out of bounds
+        new_destination += dimension**2
+    elif new_destination > dimension**2 - 1:
+        new_destination -= dimension**2
+
+    if particle_positions[new_destination]:  # if destination is full, don't do anything
+        return particle_positions
+
+    particle_positions[new_destination] = True
+    # otherwise, update destination to True and update current location to false
+    particle_positions[current_particle_position] = False
+    return particle_positions
+
+
+def run_simulation(
+    params: SimulationParameters,
+    hop_params: HoppingCalculator,
+) -> np.ndarray:
+    """Run the simulation."""
+    rng = np.random.default_rng(seed=params.rng_seed)
+    all_particle_positions = np.empty(
+        (params.n_particles, params.n_timesteps), dtype=bool
+    )  # create empty array
+
+    all_particle_positions[0] = params.initial_positions  # insert starting positions
+
+    for i in range(1, params.n_timesteps):
+        jump_probabilities = hop_params.get_hopping_probabilities(
+            all_particle_positions[i - 1]
+        )  # generate probabilities
+
+        all_particle_positions[i] = _update_positions(
+            particle_positions=all_particle_positions[i - 1],
+            jump_probabilities=jump_probabilities,
+            params=params,
+            rng=rng,
+        )  # jump forward one step
+
+    return all_particle_positions
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -72,14 +139,39 @@ class SimulationParameters:
 
     n_timesteps: int
     """Number of timesteps"""
-    initial_position: np.ndarray
-    """Initial position of particle"""
+    lattice_dimension: int
+    "Dimension of lattice"
+    lattice_type: Literal["square", "hex"]
+    "Type of lattice"
     lattice_spacing: float = 2.5
     "Spacing of lattice in Angstroms"
     hopping_probability: float = 0.01
     """The probability of hopping to a new position at each step."""
+    n_particles: int
+    """The number of particles"""
+    rng_seed: int
+    """rng seed for reproducibility"""
 
     @property
     def times(self) -> np.ndarray:
         """Times for simulation."""
         return np.arange(0, self.n_timesteps)
+
+    @property
+    def initial_positions(self) -> np.ndarray:
+        """
+        Initial particle positions.
+
+        Raises
+        ------
+        ValueError
+            If the number of particles exceeds the number of lattice spaces.
+        """
+        if self.n_particles > self.lattice_dimension * self.lattice_dimension:
+            msg = "More particles than lattice spaces"
+            raise ValueError(msg)
+
+        rng = np.random.default_rng(seed=self.rng_seed)
+        initial_positions = np.zeros(self.lattice_dimension**2, dtype=bool)
+        initial_positions[: self.n_particles] = True
+        return rng.permutation(initial_positions)

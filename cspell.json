@@ -17,7 +17,12 @@
         "xlabel",
         "ylabel",
         "pyproject",
-        "scipy"
+        "scipy",
+        "neighbour",
+        "maxfev",
+        "blit",
+        "xlim",
+        "ylim",
     ],
     "flagWords": [
         "hte",

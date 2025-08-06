@@ -70,6 +70,7 @@ def _fit_gaussian_decay(
         autocorrelation[:cutoff_index],
         p0=(1, -0.005, 1),
         bounds=([0, -np.inf, -np.inf], [np.inf, 0, np.inf]),
+        maxfev=10000,
     )
 
     return cast("NDArray[np.float64]", optimal_params)
@@ -81,7 +82,7 @@ def get_dephasing_rates(amplitudes: np.ndarray, t: np.ndarray) -> np.ndarray:
     for i in range(len(amplitudes)):
         autocorrelation = _get_autocorrelation(amplitudes[i])
         optimal_params = _fit_gaussian_decay(t=t, autocorrelation=autocorrelation)
-        dephasing_rates[i] = optimal_params[1] * -1
+        dephasing_rates[i] = optimal_params[0] * -1
     return dephasing_rates
 
 

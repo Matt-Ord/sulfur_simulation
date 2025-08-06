@@ -3,6 +3,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 
+from sulfur_simulation.hopping_calculator import SquareHoppingCalculator
 from sulfur_simulation.isf import (
     ISFParameters,
     get_amplitude,
@@ -12,19 +13,29 @@ from sulfur_simulation.isf import (
 )
 from sulfur_simulation.scattering_calculation import (
     SimulationParameters,
-    run_multiple_simulations,
+    run_simulation,
 )
+from sulfur_simulation.show_simulation import animate_particle_positions
 
 if __name__ == "__main__":
     # Create a simulation with 5000 timesteps
 
-    params = SimulationParameters(n_timesteps=2000, initial_position=np.array([0, 0]))
+    params = SimulationParameters(
+        n_timesteps=3000,
+        lattice_dimension=100,
+        lattice_type="square",
+        n_particles=500,
+        rng_seed=1,
+    )
 
-    isf_params = ISFParameters(n_delta_k_intervals=250, delta_k_max=2.5)
+    hop_params = SquareHoppingCalculator(baserate=0.01, params=params)
 
-    n_runs = 700
+    isf_params = ISFParameters(
+        n_delta_k_intervals=250,
+        delta_k_max=2.5,
+    )
 
-    positions = run_multiple_simulations(params, n_runs)
+    positions = run_simulation(params=params, hop_params=hop_params)
 
     amplitudes = get_amplitude(
         form_factor=isf_params.form_factor,
@@ -36,7 +47,7 @@ if __name__ == "__main__":
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-    plot_autocorrelation(x=average_amplitudes[85], t=params.times, ax=ax1)
+    plot_autocorrelation(x=average_amplitudes[125], t=params.times, ax=ax1)
 
     dephasing_rates = get_dephasing_rates(amplitudes=average_amplitudes, t=params.times)
 
@@ -44,6 +55,17 @@ if __name__ == "__main__":
         dephasing_rates=dephasing_rates,
         delta_k=isf_params.delta_k_array[:, 0],
         ax=ax2,
+    )
+
+    plt.show()
+
+    timesteps = np.arange(1, 51)
+
+    anim = animate_particle_positions(
+        all_particle_positions=positions,
+        grid_size=params.lattice_dimension,
+        timesteps=timesteps,
+        lattice_spacing=params.lattice_spacing,
     )
 
     plt.show()
