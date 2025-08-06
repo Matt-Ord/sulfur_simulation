@@ -69,11 +69,11 @@ if __name__ == "__main__":
 
     # plt.show()
 
-    timesteps = np.arange(1, 51)
+    timesteps = np.arange(1, 3001)[::10]
 
     anim = animate_particle_positions(
-        all_particle_positions=positions,
-        grid_size=params.lattice_dimension,
+        all_positions=positions,
+        lattice_dimension=params.lattice_dimension,
         timesteps=timesteps,
         lattice_spacing=params.lattice_spacing,
     )

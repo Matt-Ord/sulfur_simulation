@@ -3,59 +3,48 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import animation
 
 if TYPE_CHECKING:
-    import numpy as np
-    from matplotlib.axes import Axes
     from matplotlib.collections import PathCollection
-    from matplotlib.figure import Figure
 
     from sulfur_simulation.scattering_calculation import SimulationParameters
 
 
 def animate_particle_positions(
-    all_particle_positions: np.ndarray,  # shape: (n_particles, n_timesteps, 2)
-    grid_size: int,
+    all_positions: np.ndarray,  # shape: (timesteps, N*N), boolean
+    lattice_dimension: int,
     timesteps: np.ndarray,
     lattice_spacing: float = 2.5,
 ) -> animation.FuncAnimation:
-    """Animate particle positions on a lattice with given spacing."""
-    all_particle_positions.shape[0]
-
-    # Set up the figure and axis
-    fig: Figure
-    ax: Axes
+    """Animate particle positions from boolean occupancy arrays over time."""
     fig, ax = plt.subplots(figsize=(6, 6))
-    ax.set_xlim(-lattice_spacing, grid_size * lattice_spacing)
-    ax.set_ylim(-lattice_spacing, grid_size * lattice_spacing)
+    ax.set_xlim(-lattice_spacing, lattice_dimension * lattice_spacing)
+    ax.set_ylim(-lattice_spacing, lattice_dimension * lattice_spacing)
     ax.set_aspect("equal")
-
-    # Plot initial positions (will be updated in animation)
-    particle_scatter: PathCollection = ax.scatter(
-        [], [], color="red", s=40, label="Particle", edgecolors="black"
-    )
-
-    ax.legend(loc="upper right")
     ax.set_title("Particle Simulation")
 
-    # Update function for animation
+    # Initially no points
+    particle_scatter: PathCollection = ax.scatter(
+        [], [], color="red", s=40, edgecolors="black"
+    )
+    ax.legend(["Particles"], loc="upper right")
+
     def update(frame: int) -> tuple[PathCollection]:
-        current_positions: np.ndarray = all_particle_positions[
-            :, frame, :
-        ]  # shape: (n_particles, 2)
+        occupancy = all_positions[frame]  # boolean vector length N*N
+        indices = np.flatnonzero(occupancy)
+        rows = indices // lattice_dimension
+        cols = indices % lattice_dimension
 
-        # Round positions to nearest grid to identify empties
-        # Use tolerance to deal with float precision
+        # Convert lattice indices to physical positions (x=cols, y=rows)
+        x = cols * lattice_spacing
+        y = rows * lattice_spacing
 
-        # Update scatter plots
-        particle_scatter.set_offsets(current_positions)
-
+        particle_scatter.set_offsets(np.c_[x, y])
         ax.set_title(f"Timestep: {frame}")
-
         return (particle_scatter,)
 
-    # Create animation and keep reference to it
     return animation.FuncAnimation(
         fig,
         update,
