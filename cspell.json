@@ -23,6 +23,7 @@
         "blit",
         "xlim",
         "ylim",
+        "timesteps",
     ],
     "flagWords": [
         "hte",
