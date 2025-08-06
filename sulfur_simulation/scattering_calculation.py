@@ -151,6 +151,14 @@ class SimulationParameters:
     """The number of particles"""
     rng_seed: int
     """rng seed for reproducibility"""
+    temp: float
+    """Simulation temperature in Kelvin"""
+
+    @property
+    def k_b_t(self) -> float:
+        """Temp * Boltzmann constant."""
+        boltzmann = 1.380649e-23
+        return self.temp * boltzmann
 
     @property
     def times(self) -> np.ndarray:
