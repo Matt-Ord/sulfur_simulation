@@ -101,19 +101,35 @@ def plot_dephasing_rates(
 
 
 def get_amplitude(
-    form_factor: float, delta_k: np.ndarray, position: np.ndarray
+    form_factor: float,
+    delta_k: np.ndarray,
+    positions: np.ndarray,
+    lattice_dimension: int,
 ) -> np.ndarray:
-    """Calculate the complex amplitude for a given delta_k and position."""
-    r, t, _ = position.shape
+    """Return complex amplitudes per particle, timestep, and wavevector."""
+    t, total_sites = positions.shape
     m = delta_k.shape[0]
 
-    amplitudes = np.empty((r, t, m), dtype=np.complex128)
+    assert total_sites == lattice_dimension**2, "Mismatch in lattice size."
 
-    for i in range(r):
-        phase = position[i] @ delta_k.T  # shape (t, m)
-        amplitudes[i] = form_factor * np.exp(-1j * phase)
+    n_particles = np.count_nonzero(positions[0])  # Assuming fixed number
+    amplitudes = np.zeros((t, n_particles, m), dtype=np.complex128)
 
-    return amplitudes
+    for time in range(t):
+        active_indices = np.flatnonzero(positions[time])  # shape: (n_particles,)
+        assert active_indices.size == n_particles, "Inconsistent number of particles."
+
+        # Convert 1D indices to (x, y) positions
+        rows = active_indices // lattice_dimension
+        cols = active_indices % lattice_dimension
+        coords = np.stack((cols, rows), axis=-1)  # shape: (n_particles, 2)
+
+        # phase = r · Δk
+        phase = coords @ delta_k.T  # shape: (n_particles, m)
+
+        amplitudes[time] = form_factor * np.exp(-1j * phase)
+
+    return amplitudes  # shape: (timesteps, n_particles, m)
 
 
 def get_delta_k(

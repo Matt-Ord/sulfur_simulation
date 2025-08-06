@@ -6,10 +6,10 @@ import numpy as np
 from sulfur_simulation.hopping_calculator import SquareHoppingCalculator
 from sulfur_simulation.isf import (
     ISFParameters,
-    # get_amplitude,
-    # get_dephasing_rates,
-    # plot_autocorrelation,
-    # plot_dephasing_rates,
+    get_amplitude,
+    get_dephasing_rates,
+    plot_autocorrelation,
+    plot_dephasing_rates,
 )
 from sulfur_simulation.scattering_calculation import (
     SimulationParameters,
@@ -47,27 +47,28 @@ if __name__ == "__main__":
         )
     )
 
-    # amplitudes = get_amplitude(
-    #     form_factor=isf_params.form_factor,
-    #     delta_k=isf_params.delta_k_array,
-    #     position=positions,
-    # )
+    amplitudes = get_amplitude(
+        form_factor=isf_params.form_factor,
+        delta_k=isf_params.delta_k_array,
+        positions=positions,
+        lattice_dimension=params.lattice_dimension,
+    )
 
-    # average_amplitudes = np.mean(amplitudes, axis=0).T
+    average_amplitudes = np.mean(amplitudes, axis=1).T
 
-    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-    # plot_autocorrelation(x=average_amplitudes[125], t=params.times, ax=ax1)
+    plot_autocorrelation(x=average_amplitudes[125], t=params.times, ax=ax1)
 
-    # dephasing_rates = get_dephasing_rates(amplitudes=average_amplitudes, t=params.times)
+    dephasing_rates = get_dephasing_rates(amplitudes=average_amplitudes, t=params.times)
 
-    # plot_dephasing_rates(
-    #     dephasing_rates=dephasing_rates,
-    #     delta_k=isf_params.delta_k_array[:, 0],
-    #     ax=ax2,
-    # )
+    plot_dephasing_rates(
+        dephasing_rates=dephasing_rates,
+        delta_k=isf_params.delta_k_array[:, 0],
+        ax=ax2,
+    )
 
-    # plt.show()
+    plt.show()
 
     timesteps = np.arange(1, 3001)[::10]
 
