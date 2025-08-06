@@ -72,8 +72,7 @@ class SquareHoppingCalculator(HoppingCalculator):
             (self._lattice_dimension**2), 3.2e-19
         )  # temporary, all energies equivalent except for a line of low energy spaces across the middle
 
-        # true_locations = np.flatnonzero(positions)  <-- this causes all particles to get stuck under line, needs further investigation
-        # energies[true_locations] += 1
+        _ = positions
 
         mid_row_start = ((self._lattice_dimension - 1) // 2) * self._lattice_dimension
         middle_row_indices = np.arange(
