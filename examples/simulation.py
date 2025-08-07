@@ -21,25 +21,20 @@ from sulfur_simulation.show_simulation import (
 )
 
 if __name__ == "__main__":
-    # Create a simulation with 5000 timesteps
-
     params = SimulationParameters(
         n_timesteps=3000,
-        lattice_dimension=100,
-        lattice_type="square",
+        lattice_dimension=(100, 100),
         n_particles=500,
         rng_seed=1,
-        temp=200,
+        hopping_calculator=SquareHoppingCalculator(baserate=0.01, temperature=200),
     )
-
-    hop_params = SquareHoppingCalculator(baserate=0.01, params=params)
 
     isf_params = ISFParameters(
         n_delta_k_intervals=250,
         delta_k_max=2.5,
     )
 
-    positions = run_simulation(params=params, hop_params=hop_params)
+    positions = run_simulation(params=params)
 
     print(
         print_timeframe(

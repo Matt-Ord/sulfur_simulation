@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, override
+from typing import override
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from sulfur_simulation.scattering_calculation import SimulationParameters
+from scipy.constants import Boltzmann  # type: ignore library types
 
 
 class HoppingCalculator(ABC):
@@ -20,20 +18,16 @@ class HoppingCalculator(ABC):
 class SquareHoppingCalculator(HoppingCalculator):
     """Class for calculating hopping probabilities in a square lattice."""
 
-    def __init__(self, baserate: float, params: SimulationParameters) -> None:
+    def __init__(self, baserate: float, temperature: float) -> None:
         self._baserate = baserate
-        self._lattice_dimension = params.lattice_dimension
-        self._params = params
-        self._k_B_T = params.k_b_t
+        self._temperature = temperature
 
     @override
-    def get_hopping_probabilities(self, positions: np.ndarray) -> np.ndarray:
-        energies = self._energy_landscape_generator(positions=positions)
-        true_locations = np.flatnonzero(positions)
-        n = self._lattice_dimension
-
-        rows = true_locations // n
-        cols = true_locations % n
+    def get_hopping_probabilities(
+        self, positions: np.ndarray[tuple[int, int], np.dtype[np.bool_]]
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        energies = self._get_energy_landscape(positions=positions)
+        rows, cols = np.nonzero(positions)
 
         delta = np.array(
             [
@@ -49,34 +43,41 @@ class SquareHoppingCalculator(HoppingCalculator):
             ]
         )
 
-        neighbor_rows = (rows[:, None] + delta[:, 0]) % n
-        neighbor_cols = (cols[:, None] + delta[:, 1]) % n
-        neighbor_indices = neighbor_rows * n + neighbor_cols
+        neighbor_rows = (rows[:, None] + delta[:, 0]) % positions.shape[0]
+        neighbor_cols = (cols[:, None] + delta[:, 1]) % positions.shape[1]
+        np.ravel_multi_index((neighbor_rows, neighbor_cols), positions.shape)
 
-        neighbor_energies = energies[neighbor_indices]  # shape (n_particles, 9)
-        current_energies = energies[true_locations][:, None]  # shape (n_particles, 1)
+        neighbor_energies = energies[neighbor_rows, neighbor_cols]
+        current_energies = energies[rows, cols][:, None]
 
-        # --- Symmetric rate based on energy difference ---
-        beta = 1 / (2 * self._k_B_T)  # assumes k_B_T is stored in the object
-        energy_diffs = neighbor_energies - current_energies
-        rates = np.exp(-beta * energy_diffs) * self._baserate
+        # Calculate the rate bnased on the boltzmann factor
+        # beta = delta_e / (k_B * T)  # noqa: ERA001
+        beta = 1 / (2 * Boltzmann * self._temperature)
+        energy_difference = neighbor_energies - current_energies
+        rates = np.exp(-beta * energy_difference) * self._baserate
 
-        # --- Prevent self-jumps ---
+        # Prevent self-jumps
         rates[:, 4] = 0
 
         return rates
 
-    def _energy_landscape_generator(self, positions: np.ndarray) -> np.ndarray:
+    @classmethod
+    def _get_energy_landscape(
+        cls, positions: np.ndarray[tuple[int, int], np.dtype[np.bool_]]
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.float64]]:
         """Generate the energy landscape for the lattice."""
-        energies = np.full(
-            (self._lattice_dimension**2), 3.2e-19
-        )  # temporary, all energies equivalent except for a line of low energy spaces across the middle
+        return np.full(positions.shape, 3.2e-19)
 
-        _ = positions
 
-        mid_row_start = ((self._lattice_dimension - 1) // 2) * self._lattice_dimension
-        middle_row_indices = np.arange(
-            mid_row_start, mid_row_start + self._lattice_dimension
-        )
-        energies[middle_row_indices] = 0
+class LineDefectHoppingCalculator(SquareHoppingCalculator):
+    """Hopping Calculator for a line defect in a square lattice."""
+
+    @classmethod
+    @override
+    def _get_energy_landscape(
+        cls, positions: np.ndarray[tuple[int, int], np.dtype[np.bool_]]
+    ) -> np.ndarray[tuple[int, int], np.dtype[np.float64]]:
+        """Generate the energy landscape for the lattice."""
+        energies = super()._get_energy_landscape(positions=positions)
+        energies[positions.shape[0] // 2, :] = 0
         return energies

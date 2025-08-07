@@ -104,24 +104,21 @@ def get_amplitude(
     form_factor: float,
     delta_k: np.ndarray,
     positions: np.ndarray,
-    lattice_dimension: int,
+    lattice_dimension: tuple[int, int],
 ) -> np.ndarray:
     """Return complex amplitudes per particle, timestep, and wavevector."""
     t, total_sites = positions.shape
     m = delta_k.shape[0]
 
-    assert total_sites == lattice_dimension**2, "Mismatch in lattice size."
+    assert total_sites == np.prod(lattice_dimension), "Mismatch in lattice size."
 
     n_particles = np.count_nonzero(positions[0])  # Assuming fixed number
     amplitudes = np.zeros((t, n_particles, m), dtype=np.complex128)
 
     for time in range(t):
-        active_indices = np.flatnonzero(positions[time])  # shape: (n_particles,)
-        assert active_indices.size == n_particles, "Inconsistent number of particles."
+        rows, cols = np.nonzero(positions[time])
 
-        # Convert 1D indices to (x, y) positions
-        rows = active_indices // lattice_dimension
-        cols = active_indices % lattice_dimension
+        # TODO: skip stack
         coords = np.stack((cols, rows), axis=-1)  # shape: (n_particles, 2)
 
         # phase = r · Δk

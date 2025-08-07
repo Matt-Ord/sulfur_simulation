@@ -13,15 +13,15 @@ if TYPE_CHECKING:
 
 
 def animate_particle_positions(
-    all_positions: np.ndarray,  # shape: (timesteps, N*N), boolean
-    lattice_dimension: int,
+    all_positions: np.ndarray[tuple[int, int, int], np.dtype[np.bool_]],
+    lattice_dimension: tuple[int, int],
     timesteps: np.ndarray,
     lattice_spacing: float = 2.5,
 ) -> animation.FuncAnimation:
     """Animate particle positions from boolean occupancy arrays over time."""
     fig, ax = plt.subplots(figsize=(6, 6))
-    ax.set_xlim(-lattice_spacing, lattice_dimension * lattice_spacing)
-    ax.set_ylim(-lattice_spacing, lattice_dimension * lattice_spacing)
+    ax.set_xlim(-lattice_spacing, lattice_dimension[0] * lattice_spacing)
+    ax.set_ylim(-lattice_spacing, lattice_dimension[1] * lattice_spacing)
     ax.set_aspect("equal")
     ax.set_title("Particle Simulation")
 
@@ -32,10 +32,8 @@ def animate_particle_positions(
     ax.legend(["Particles"], loc="upper right")
 
     def update(frame: int) -> tuple[PathCollection]:
-        occupancy = all_positions[frame]  # boolean vector length N*N
-        indices = np.flatnonzero(occupancy)
-        rows = indices // lattice_dimension
-        cols = indices % lattice_dimension
+        occupancy = all_positions[frame]
+        rows, cols = np.nonzero(occupancy)
 
         # Convert lattice indices to physical positions (x=cols, y=rows)
         x = cols * lattice_spacing
@@ -56,14 +54,16 @@ def animate_particle_positions(
 
 
 def print_timeframe(
-    positions: np.ndarray, timestep: int, params: SimulationParameters
+    positions: np.ndarray[tuple[int, int], np.dtype[np.bool_]],
+    timestep: int,
+    params: SimulationParameters,
 ) -> str:
     """Print a preview of positions at specified timestep. Works for small grids."""
     dimension = params.lattice_dimension
     max_dimension = 100
-    if dimension > max_dimension:
+    if dimension[0] > max_dimension or dimension[1] > max_dimension:
         return "Lattice too large to print"
-    grid = positions[timestep].reshape((dimension, dimension))
+    grid = positions[timestep].reshape(params.lattice_dimension)
 
     green = "\033[92m"
     gray = "\033[0m"
