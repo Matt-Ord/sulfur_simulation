@@ -23,6 +23,8 @@
         "blit",
         "xlim",
         "ylim",
+        "tqdm",
+        "trange",
         "timesteps",
     ],
     "flagWords": [

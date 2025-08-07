@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
+from tqdm import trange
 
 if TYPE_CHECKING:
     from hopping_calculator import HoppingCalculator
@@ -67,7 +68,7 @@ def _make_jump(
     jump_idx: int,
     particle_positions: np.ndarray,
 ) -> np.ndarray:
-    # TODO: this should probably depend on the hopping calculator
+    # TODO: this should probably depend on the hopping calculator  # noqa: FIX002
     jump = [
         (-1, -1),
         (-1, 0),
@@ -126,7 +127,7 @@ def run_simulation(
     )
     all_positions[0] = params.initial_positions
 
-    for i in range(1, params.n_timesteps):
+    for i in trange(1, params.n_timesteps):
         jump_probabilities = params.hopping_calculator.get_hopping_probabilities(
             all_positions[i - 1]
         )

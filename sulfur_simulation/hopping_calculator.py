@@ -50,7 +50,7 @@ class SquareHoppingCalculator(HoppingCalculator):
         neighbor_energies = energies[neighbor_rows, neighbor_cols]
         current_energies = energies[rows, cols][:, None]
 
-        # Calculate the rate bnased on the boltzmann factor
+        # Calculate the rate based on the boltzmann factor
         # beta = delta_e / (k_B * T)  # noqa: ERA001
         beta = 1 / (2 * Boltzmann * self._temperature)
         energy_difference = neighbor_energies - current_energies

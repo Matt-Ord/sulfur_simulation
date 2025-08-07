@@ -37,7 +37,7 @@ def _gaussian_decay_function(
     return a * np.exp(b * x) + c
 
 
-def plot_autocorrelation(
+def plot_isf(
     x: np.ndarray[Any, np.dtype[np.float64]], t: np.ndarray, *, ax: Axes | None = None
 ) -> tuple[Figure | SubFigure, Axes]:
     """Plot autocorrelation data with an exponential curve fit on a given axis."""
@@ -100,36 +100,28 @@ def plot_dephasing_rates(
     return fig, ax
 
 
-def get_amplitude(
-    form_factor: float,
-    delta_k: np.ndarray,
-    positions: np.ndarray,
-    lattice_dimension: tuple[int, int],
-) -> np.ndarray:
+def get_isf(
+    params: ISFParameters,
+    positions: np.ndarray[tuple[int, int], np.dtype[np.bool_]],
+) -> np.ndarray[tuple[int, int], np.dtype[np.complex128]]:
     """Return complex amplitudes per particle, timestep, and wavevector."""
-    t, total_sites = positions.shape
-    m = delta_k.shape[0]
-
-    assert total_sites == np.prod(lattice_dimension), "Mismatch in lattice size."
-
     n_particles = np.count_nonzero(positions[0])  # Assuming fixed number
-    amplitudes = np.zeros((t, n_particles, m), dtype=np.complex128)
+    amplitudes = np.zeros(
+        (positions.shape[0], n_particles, params.delta_k_array.shape[0]),
+        dtype=np.complex128,
+    )
 
-    for time in range(t):
-        rows, cols = np.nonzero(positions[time])
-
-        # TODO: skip stack
-        coords = np.stack((cols, rows), axis=-1)  # shape: (n_particles, 2)
+    for time in range(amplitudes.shape[0]):
+        coords = np.nonzero(positions[time])
 
         # phase = r · Δk
-        phase = coords @ delta_k.T  # shape: (n_particles, m)
+        phase = np.transpose(coords) @ params.delta_k_array.T
+        amplitudes[time] = params.form_factor * np.exp(-1j * phase)
 
-        amplitudes[time] = form_factor * np.exp(-1j * phase)
-
-    return amplitudes  # shape: (timesteps, n_particles, m)
+    return amplitudes
 
 
-def get_delta_k(
+def _get_delta_k(
     n_points: int,
     delta_k_range: tuple[float, float],
     direction: tuple[float, float] = (1, 0),
@@ -163,7 +155,7 @@ class ISFParameters:
     @property
     def delta_k_array(self) -> np.ndarray:
         """All delta_k values."""
-        return get_delta_k(
+        return _get_delta_k(
             n_points=self.n_delta_k_intervals,
             delta_k_range=(self.delta_k_min, self.delta_k_max),
         )
