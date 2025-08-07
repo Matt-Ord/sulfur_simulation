@@ -135,6 +135,6 @@ def run_simulation(
             particle_positions=all_positions[i - 1],
             jump_probabilities=jump_probabilities,
             rng=rng,
-        ).reshape(params.lattice_dimension)
+        )
 
     return all_positions
