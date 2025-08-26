@@ -33,9 +33,14 @@
         "waals",
         "zorder",
         "xticklabels",
+        "yticklabels",
         "pickler",
         "savez",
-        "unpickler"
+        "unpickler",
+        "normalise",
+        "normalised",
+        "xtick",
+        "ytick"
     ],
     "flagWords": [
         "hte",
